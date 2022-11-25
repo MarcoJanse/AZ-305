@@ -118,7 +118,7 @@ Things to know about Azure landing zones
 
 Landing zone example:
 
-![Azure Landing Zone example](../../../../../../C:/Git/GitHub/MarcoJanse/AZ-305/MS-Learn/Images/Azure-Landing-Zone-Example.svg)
+![Azure Landing Zone example](../MS-Learn/Images/Azure-Landing-Zone-Example.svg)
 
 ### Links related to Architecting, Governance and Landing Zones
 
@@ -146,7 +146,7 @@ Azure AD B2C is a type of Azure AD tenant for managing customer identities and t
 - The Azure AD tenant represents your organization.
 - The Azure AD B2C tenant represents the identities for your customer apps
 
-![Azure AD B2C Flow](../../../../../../C:/Git/GitHub/MarcoJanse/AZ-305/MS-Learn/Images/application-registration.png)
+![Azure AD B2C Flow](../MS-Learn/Images/application-registration.png)
 
 #### Comparision between B2B to B2C
 
@@ -189,7 +189,7 @@ There are two ways an app can be represented in Azure AD:
 - **Application object** - An app object allows the service to know how to issue tokens to the app based on the object settings. The app object exists only in its home directory, even if it's a multi-tenant app that supports service principals in other directories
 - **Service Principal** - The service principal for an app can be considered an instance of an app. Service principals generally reference an app object. One app object can be referenced by multiple service principals across directories
 
-![Service Principals](../../../../../../C:/Git/GitHub/MarcoJanse/AZ-305/MS-Learn/Images/application-service-principals.png)
+![Service Principals](../MS-Learn/Images/application-service-principals.png)
 
 There are three types of service principals:
 
@@ -241,7 +241,7 @@ Things to consider with key vault:
 
 ### Overview of Azure Monitor
 
-![Azure Monitor Overview](../../../../../../C:/Git/GitHub/MarcoJanse/AZ-305/MS-Learn/Images/azure-monitor-source.png)
+![Azure Monitor Overview](../MS-Learn/Images/azure-monitor-source.png)
 
 ### Characteristics of Azure Monitor
 
@@ -304,7 +304,7 @@ Excluded tables
 
 This scenario shows a recommended design for a single workspace in your IT organization's subscription.
 
-![Recommended Log Analytics Workspace](../../../../../../C:/Git/GitHub/MarcoJanse/AZ-305/MS-Learn/Images/workspace-design-expanded.png)
+![Recommended Log Analytics Workspace](../MS-Learn/Images/workspace-design-expanded.png)
 
 ### Azure Workbooks
 
@@ -337,7 +337,7 @@ Azure Data Explorer provides greater flexibility for building quick and easy nea
 
 Below is an image of a monitoring solution that utilizes Data Explorer
 
-![Monitoring solution utilizing Azure Data Explorer](../../../../../../C:/Git/GitHub/MarcoJanse/AZ-305/MS-Learn/Images/azure-data-explorer.png)
+![Monitoring solution utilizing Azure Data Explorer](../MS-Learn/Images/azure-data-explorer.png)
 ## Networking
 
 ### Virtual Network (vNET)
