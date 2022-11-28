@@ -32,6 +32,35 @@
   - [Networking](#networking)
     - [Virtual Network (vNET)](#virtual-network-vnet)
       - [Address space](#address-space)
+  - [Design business continuity](#design-business-continuity)
+    - [SLA uptime level table](#sla-uptime-level-table)
+    - [Availability metrics](#availability-metrics)
+    - [Azure Front Door](#azure-front-door)
+      - [High availability solutions for Azure Front Door](#high-availability-solutions-for-azure-front-door)
+    - [Azure Traffic Manager](#azure-traffic-manager)
+      - [High availability scenarios for Azure Traffic Manager](#high-availability-scenarios-for-azure-traffic-manager)
+      - [Example of Active/Passive scenario with Traffic Manager](#example-of-activepassive-scenario-with-traffic-manager)
+    - [High Availability for Compute](#high-availability-for-compute)
+      - [Availability zones](#availability-zones)
+      - [VM HA options](#vm-ha-options)
+      - [Zonal architucture](#zonal-architucture)
+      - [Zone-redundant architecture](#zone-redundant-architecture)
+    - [Virtual Machine Scale set options](#virtual-machine-scale-set-options)
+    - [Highly Available Container solution](#highly-available-container-solution)
+      - [Describe Azure Storage replication options for AKS](#describe-azure-storage-replication-options-for-aks)
+      - [Consider Azure Backup or Velero for AKS data](#consider-azure-backup-or-velero-for-aks-data)
+    - [HA for relational data](#ha-for-relational-data)
+      - [Azure SQL](#azure-sql)
+        - [General Purpose](#general-purpose)
+        - [Business Critical](#business-critical)
+        - [Hyperscale](#hyperscale)
+      - [Azure SQL SLA](#azure-sql-sla)
+      - [Active geo-replication for SQL](#active-geo-replication-for-sql)
+      - [Compare geo-replication to failover groups](#compare-geo-replication-to-failover-groups)
+    - [Storage Redundancy](#storage-redundancy)
+      - [Redundancy options](#redundancy-options)
+        - [Summary of storage redundancy options](#summary-of-storage-redundancy-options)
+    - [Useful links](#useful-links)
 
 
 ## Governance
@@ -118,7 +147,7 @@ Things to know about Azure landing zones
 
 Landing zone example:
 
-![Azure Landing Zone example](../MS-Learn/Images/Azure-Landing-Zone-Example.svg)
+![Azure Landing Zone example](Images/Azure-Landing-Zone-Example.svg)
 
 ### Links related to Architecting, Governance and Landing Zones
 
@@ -146,7 +175,7 @@ Azure AD B2C is a type of Azure AD tenant for managing customer identities and t
 - The Azure AD tenant represents your organization.
 - The Azure AD B2C tenant represents the identities for your customer apps
 
-![Azure AD B2C Flow](../MS-Learn/Images/application-registration.png)
+![Azure AD B2C Flow](Images/application-registration.png)
 
 #### Comparision between B2B to B2C
 
@@ -189,7 +218,7 @@ There are two ways an app can be represented in Azure AD:
 - **Application object** - An app object allows the service to know how to issue tokens to the app based on the object settings. The app object exists only in its home directory, even if it's a multi-tenant app that supports service principals in other directories
 - **Service Principal** - The service principal for an app can be considered an instance of an app. Service principals generally reference an app object. One app object can be referenced by multiple service principals across directories
 
-![Service Principals](../MS-Learn/Images/application-service-principals.png)
+![Service Principals](Images/application-service-principals.png)
 
 There are three types of service principals:
 
@@ -241,7 +270,7 @@ Things to consider with key vault:
 
 ### Overview of Azure Monitor
 
-![Azure Monitor Overview](../MS-Learn/Images/azure-monitor-source.png)
+![Azure Monitor Overview](Images/azure-monitor-source.png)
 
 ### Characteristics of Azure Monitor
 
@@ -304,7 +333,7 @@ Excluded tables
 
 This scenario shows a recommended design for a single workspace in your IT organization's subscription.
 
-![Recommended Log Analytics Workspace](../MS-Learn/Images/workspace-design-expanded.png)
+![Recommended Log Analytics Workspace](Images/workspace-design-expanded.png)
 
 ### Azure Workbooks
 
@@ -337,7 +366,7 @@ Azure Data Explorer provides greater flexibility for building quick and easy nea
 
 Below is an image of a monitoring solution that utilizes Data Explorer
 
-![Monitoring solution utilizing Azure Data Explorer](../MS-Learn/Images/azure-data-explorer.png)
+![Monitoring solution utilizing Azure Data Explorer](Images/azure-data-explorer.png)
 ## Networking
 
 ### Virtual Network (vNET)
@@ -346,3 +375,200 @@ Below is an image of a monitoring solution that utilizes Data Explorer
 
 The address space needs to be unique within your subscription and any other networks that you connect to
 
+## Design business continuity
+
+### SLA uptime level table
+
+| **SLA** | **Downtime per week** | **Downtime per month** | **Downtime per year** |
+|---------|-----------------------|------------------------|-----------------------|
+| 99%     | 1.68 hours            | 7.2 hours              | 3.65 days             |
+| 99.9%   | 10.1 minutes          | 43.2 minutes           | 8.76 hours            |
+| 99.95%  | 5 minutes             | 21.6 minutes           | 4.38 hours            |
+| 99.99%  | 1.01 minutes          | 4.32 minutes           | 52.56 minutes         |
+| 99.999% | 6 seconds             | 25.9 seconds           | 5.26 minutes          |
+
+### Availability metrics
+
+Use these measures to plan for redundancy and determine customer SLAs.
+
+- **Mean time to recover (MTTR)** is the average time it takes to restore a component after a failure.
+- **Mean time between failures (MTBF)** is how long a component can reasonably expect to last between outages.
+
+### Azure Front Door
+
+[Azure Front Door](https://learn.microsoft.com/en-us/azure/frontdoor/front-door-overview) offers a fast, reliable, and secure modern cloud Content Delivery Network (CDN) by using the Microsoft global edge network to integrate with intelligent threat protection. Azure Front Door optimizes access times to content. Front Door can be used to provide another layer of reliability in front of your Azure resources. It is an application delivery network that provides global load balancing and site acceleration service for web applications. It offers Layer 7 capabilities for your application like SSL offload, path-based routing, fast failover, caching, etc. to improve performance and high-availability of your applications.
+
+![Front Door Solution](Images/front-door-integrate.png)
+
+#### High availability solutions for Azure Front Door
+
+| **Approach**                     | **Description**                                                                                                                                                                                                                                                   |
+|----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Active/passive with hot standby  | Traffic goes to one region, while the other waits on hot standby. Hot standby means the VMs in the secondary region are always running.                                                                                                                           |
+| Active/passive with cold standby | Traffic goes to one region, while the other waits on cold standby. Cold standby means the VMs in the secondary region aren’t allocated until needed for failover. This approach costs less to run but will generally take longer to come online during a failure. |
+| Active/active                    | Both regions are active, and requests are load balanced between them. If one region becomes unavailable, it’s taken out of rotation.                                                                                                                              |
+
+### Azure Traffic Manager
+
+[Azure Traffic Manager](https://learn.microsoft.com/en-us/azure/traffic-manager/traffic-manager-overview) is a DNS-based traffic load balancer. This service allows you to distribute traffic to your public facing applications across the global Azure regions. Traffic Manager also provides your public endpoints with high availability and quick responsiveness. It is a DNS-based traffic load balancer that enables you to distribute traffic optimally to services across global Azure regions, while providing high availability and responsiveness. Because Traffic Manager is a DNS-based load-balancing service, it load balances only at the domain level. For that reason, it can't fail over as quickly as Front Door, because of common challenges around DNS caching and systems not honoring DNS TTLs.
+
+![Azure Traffic Manager](Images/traffic-manager-geographic-routing.png)
+
+#### High availability scenarios for Azure Traffic Manager
+
+| **Approach**                     | **Description**                                                                                                                                                                                                                                                                                                                                              |
+|----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Active/Passive with cold standby | Your VMs (and other appliances) that are running in the standby region aren't active until needed. However, your production environment is replicated to a different region. This approach is cost-effective but takes longer to undertake a complete failover.                                                                                              |
+| Active/Passive with pilot light  | You establish the standby environment with a minimal configuration; it has only the necessary services running to support a minimal and critical set of apps. In its default form, this approach can only execute minimal functionality. However, it can scale up and spawn more services, as needed, to take more of the production load during a failover. |
+| Active/Passive with warm standby | Your standby region is pre-warmed and is ready to take the base load. Auto scaling is on, and all the instances are up and running. This approach isn't scaled to take the full production load but is functional, and all services are up and running.                                                                                                      |
+
+#### Example of Active/Passive scenario with Traffic Manager
+
+![Azure Traffic Manager Active/Passive scenario](Images/automatic-fail-over-using-traffic-manager.png))
+
+### High Availability for Compute
+
+#### Availability zones
+
+![Availability zones](Images/azure-availability-zones.png)
+
+#### VM HA options
+
+![VM HA options](Images/virtual-machine-availability.png)
+
+#### Zonal architucture
+
+![zonal architecture](Images/zonal-architecture.png)
+
+#### Zone-redundant architecture
+
+![zone-redundant architecture](Images/zone-redundant-load-balancer.png)
+
+### Virtual Machine Scale set options
+
+| **Scenario**                                        | **Group of virtual machines**                                                          | Virtual machine scale sets                                                             |
+|-----------------------------------------------------|----------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| You need to add VM instances for changing workload  | Manual process to create, configure, and ensure compliance                             | Automatically create from central configuration                                        |
+| You need to balance and distribute workloads        | Manual process to create and configure Azure load balancer or Application Gateway      | Can automatically create and integrate with Azure load balancer or Application Gateway |
+| You need high availability and redundancy           | Manually create Availability Set or distribute and track VMs across Availability Zones | Automatic distribution of VM instances across Availability Zones or Availability Sets  |
+| You need to monitor and then scale virtual machines | Manual monitoring and Azure Automation                                                 | Autoscale based on host metrics, in-guest metrics, Application Insights, or schedule   |
+
+### Highly Available Container solution
+
+When planning to implement AKS clusters across multiple region deployments, consider the following:
+
+- **AKS region availability.** Choose regions that are close to your users. Keep in mind that AKS is continually expanding into new regions.
+- **Azure paired regions.** For your geographic area, choose two regions paired together. Also consider that:
+  - AKS platform updates (planned maintenance) are serialized with a delay of at least 24 hours between paired regions.
+  - Recovery efforts for paired regions are prioritized where needed.
+- **Service availability.** Decide whether your paired regions should be hot/hot, hot/warm, or hot/cold. In other words, do you want to run both regions at the same time, with one region ready to start serving traffic? Or do you want to give one region time to get ready to serve traffic?
+
+#### Describe Azure Storage replication options for AKS
+
+It's probable that your apps use Azure Storage for their data. Assuming they do, and that those apps are distributed across multiple AKS clusters in multiple regions, you'll need a way to synchronize storage. With Azure Storage, there are two possible options you can consider:
+
+- Infrastructure-based asynchronous replication
+- Application-based asynchronous replication
+
+#### Consider Azure Backup or Velero for AKS data
+
+As with any app, it's important you back up the data related to your AKS clusters and their apps. When your apps consume and store data which is persisted on disks or in files, you should schedule frequent backups or take regular snapshots of that data. You can use several tools for these backup operations, including:
+
+- **Azure Disks:** Azure Disks can use built-in snapshot technologies. However, your apps might need to flush writes-to-disk before the snapshot operation.
+- **Velero:** Velero can back up persistent volumes along with additional cluster resources and configurations.
+
+### HA for relational data
+
+#### Azure SQL
+
+Two purchasing models
+
+- DTU
+- vCore
+
+Service Tiers:
+
+##### General Purpose
+
+![Azure SQL General Purpose Failover](Images/azure-sql-fail-over.png)
+
+##### Business Critical
+
+![Azure SQL Business Critical Failover](Images/sql-business-critical-fail-over.png)
+
+Using Business Critical is like deploying an Always On availability group (AG) behind the scenes. Unlike in the General Purpose tier, in Business Critical, the data and log files are all running on direct-attached SSD, which significantly reduces network latency. (General Purpose uses remote storage.) In this AG, there are three secondary replicas. One of them can be used as a read-only endpoint (at no additional charge). A transaction can complete a commit when at least one of the secondary replicas has hardened the change for its transaction log.
+
+##### Hyperscale
+
+![SQL Hyperscale](Images/sql-hyper-scale-service-tier.png)
+
+Business Critical maintains the highest performance and availability for workloads with small log writes that need low latency. But the Hyperscale service tier allows you to get a higher log throughput in terms of MB/second, provides for the largest database sizes, and provides up to four secondary replicas for higher levels of read scale. So, you'll need to consider your workload when you choose between the two.
+
+#### Azure SQL SLA
+
+Currently, you can achieve the highest availability (99.995%) from an Azure SQL Database Business Critical deployment that has Availability Zones configured. The Business Critical tier is the only option in the industry that provides recovery point objective (RPO) and recovery time objective (RTO) SLAs of 5 seconds and 30 seconds, respectively.
+
+For General Purpose or single-zone Business Critical deployments of Azure SQL Database or Azure SQL Managed Instance, the SLA is 99.99%.
+
+The Hyperscale tier's SLA depends on the number of replicas. Remember that you choose how many replicas you have in Hyperscale. If you don't have any, the failover behavior is more like that of General Purpose. If you have replicas, the failover behavior is more like that of Business Critical. Here are the SLAs, based on the number of replicas:
+
+- 0 replicas: 99.5%
+- 1 replica: 99.9%
+- 2 or more replicas: 99.99%
+
+#### Active geo-replication for SQL
+
+Active geo-replication isn’t supported by Azure SQL Managed Instance
+
+#### Compare geo-replication to failover groups
+
+|                                                   | Geo-replication | Failover groups |
+|---------------------------------------------------|-----------------|-----------------|
+| Automatic failover                                | No              | Yes             |
+| Fail over multiple databases simultaneously       | No              | Yes             |
+| User must update connection string after failover | Yes             | No              |
+| SQL Managed Instance support                      | No              | Yes             |
+| Can be in same region as primary                  | Yes             | No              |
+| Multiple replicas                                 | Yes             | No              |
+| Supports read-scale                               | Yes             | Yes             |
+
+### Storage Redundancy
+
+#### Redundancy options
+
+**Locally redundant storage (LRS).** Helps protect your data against drive or server rack failures in a data center. But if a disaster occurs within the data center, all replicas of your storage account that uses LRS might be lost. This option:
+
+- Copies your data synchronously three times within a single physical location in the primary region.
+- Is the least expensive replication option.
+- Isn’t recommended for apps that require high availability or durability.
+
+**Zone-redundant storage (ZRS).** Helps ensure that your data is still accessible for both read and write operations even if a zone becomes unavailable. This option:
+
+- Copies your data synchronously across three Azure availability zones in the primary region.
+- Recommended by Microsoft for apps requiring high availability in the primary region and replicating to a secondary region.
+
+**Geo-redundant storage (GRS).**
+
+- Copies your data synchronously three times within a single physical location in the primary region using LRS.
+- Copies your data asynchronously to a single physical location in the secondary region.
+- Copies your data synchronously three times within the secondary region using LRS.
+
+**Geo-zone-redundant storage (GZRS).**
+
+- Copies your data synchronously across three Azure availability zones in the primary region using ZRS.
+- Copies your data asynchronously to a single physical location in the secondary region.
+- Copies your data synchronously three times using LRS within the secondary region.
+
+##### Summary of storage redundancy options
+
+| **Outage scenario**                                                                        | **LRS** | **ZRS** | **GRS/RA-GRS**    | **GZRS/RA-GZRS**   |
+|--------------------------------------------------------------------------------------------|---------|---------|-------------------|--------------------|
+| A node within a data center becomes unavailable                                            | Yes     | Yes     | Yes               | Yes                |
+| An entire data center (zonal or non-zonal) becomes unavailable                             | No      | Yes     | Yes*              | Yes                |
+| A region-wide outage occurs in the primary region                                          | No      | No      | Yes*              | Yes*               |
+| Read access to the secondary region is available if the primary region becomes unavailable | No      | No      | Yes (with RA-GRS) | Yes (with RA-GZRS) |
+
+### Useful links
+
+- [Azure Service Level Agreements](https://azure.microsoft.com/en-us/support/legal/sla/)
+- [Service Level Agreement Estimator](https://github.com/mspnp/samples/tree/main/Reliability/SLAEstimator)
