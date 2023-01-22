@@ -61,6 +61,23 @@
       - [Redundancy options](#redundancy-options)
         - [Summary of storage redundancy options](#summary-of-storage-redundancy-options)
     - [Useful links](#useful-links)
+  - [Design business continuity solutions](#design-business-continuity-solutions)
+    - [Design for backup and recovery](#design-for-backup-and-recovery)
+      - [What can you do with Azure Backup?](#what-can-you-do-with-azure-backup)
+      - [Where is the data backed up?](#where-is-the-data-backed-up)
+    - [Design for Azure blob backup and recovery](#design-for-azure-blob-backup-and-recovery)
+      - [Blob soft delete and versioning](#blob-soft-delete-and-versioning)
+    - [Design for Azure files backup and recovery](#design-for-azure-files-backup-and-recovery)
+      - [Azure files backup details](#azure-files-backup-details)
+      - [Considerations for file share backups](#considerations-for-file-share-backups)
+    - [Design for Azure virtual machine backup and recovery](#design-for-azure-virtual-machine-backup-and-recovery)
+      - [Considerations for virtual machine backups and restore](#considerations-for-virtual-machine-backups-and-restore)
+    - [Design Azure SQL backup and recovery](#design-azure-sql-backup-and-recovery)
+      - [SQL Automated backup overview](#sql-automated-backup-overview)
+      - [SQL backup use cases](#sql-backup-use-cases)
+      - [Long-term backup retention policies](#long-term-backup-retention-policies)
+    - [Design for Azure Site Recovery](#design-for-azure-site-recovery)
+      - [What can you do with Azure Site Recovery?](#what-can-you-do-with-azure-site-recovery)
 
 
 ## Governance
@@ -572,3 +589,139 @@ Active geo-replication isn’t supported by Azure SQL Managed Instance
 
 - [Azure Service Level Agreements](https://azure.microsoft.com/en-us/support/legal/sla/)
 - [Service Level Agreement Estimator](https://github.com/mspnp/samples/tree/main/Reliability/SLAEstimator)
+
+## Design business continuity solutions
+
+### Design for backup and recovery
+
+Use the following table of considerations to provide guidance on this process.
+
+| **Consideration**                               | **Description**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|-------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| What are your workloads and their usage?        | A workload is a distinct capability or task that is logically separated from other tasks, in terms of business logic and data storage requirements. Each workload probably has different requirements for availability, scalability, data consistency, and disaster recovery.                                                                                                                                                                                                                                                                                                                                    |
+| What are the usage patterns for your workloads? | Usage patterns can determine your requirements. Identify differences in requirements during both critical and non-critical periods. To ensure uptime, plan redundancy across several regions in case one region fails. Conversely, to minimize costs during non-critical periods, you can run your application in a single region.                                                                                                                                                                                                                                                                               |
+| What are the availability metrics?              | Mean time to recovery **(MTTR)** and mean time between failures **(MTBF)** are the typically used metrics. MTBF is how long a component can reasonably expect to last between outages. MTTR is the average time it takes to restore a component after a failure. Use these metrics to determine where you need to add redundancy, and to determine service-level agreements (SLAs) for customers.                                                                                                                                                                                                                        |
+| What are the recovery metrics?                  | The recovery time objective **(RTO)** is the maximum acceptable time one of your apps can be unavailable following an incident. The recovery point objective **(RPO)** is the maximum duration of data loss that is acceptable during a disaster. Also consider the recovery level objective **(RLO)**. This metric determines the granularity of recovery. In other words, whether you must be able to recover a server farm, a web app, a site, or just a specific item. To determine these values, conduct a risk assessment. Ensure that you understand the cost and risk of downtime or data loss in your organization. |
+| What are the workload availability targets?     | To help ensure that your app architecture meets your business requirements, define target SLAs for each workload. Account for the cost and complexity of meeting availability requirements, in addition to application dependencies.                                                                                                                                                                                                                                                                                                                                                                             |
+| What are your SLAs?                             | In Azure, the SLA describes the Microsoft commitments for uptime and connectivity. If the SLA for a particular service is 99.9 percent, you should expect the service to be available 99.9 percent of the time.                                                                                                                                                                                                                                                                                                                                                                                                  |
+
+#### What can you do with Azure Backup?
+
+![Azure Backup overview](Images/azure-backup-overview.png)
+
+You can use Azure Backup for these backup types:
+
+- **On-premises.** Azure Backup can back up files, folders, and system state using the Microsoft Azure Recovery Services (MARS) agent. Alternatively, you can use Data Protection Manager (DPM) or the Microsoft Azure Backup Server (MABS) agent to protect on-premises VMs (both Hyper-V and VMware), and other on-premises workloads.
+- **Azure VM.** Back up entire Windows or Linux VMs (using backup extensions), or back up files, folders, and system state using the MARS agent.
+- **Azure Files shares.** Back up Azure File shares to a storage account.
+- **Microsoft SQL Server in Azure VMs.** Back up SQL Server databases running on Azure VMs.
+- **SAP HANA databases in Azure VMs.** Back up SAP HANA databases running on Azure VMs.
+- **Microsoft cloud.** Azure Backup can replace your existing on-premises or off-site backup solution with a cloud-based solution that's reliable, secure, and cost-competitive.
+
+#### Where is the data backed up?
+
+There are two types of vaults. The primary differences in the vaults are supported data sources and supported Azure products.
+
+| **Capability**          | **Supported data sources**                                                                                                                      | **Supported products**            |
+|-------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------|
+| Backup vault            | Azure database for PostgreSQL servers Azure blobs Azure disks                                                                                   | Azure Backup                      |
+| Recovery services vault | Azure virtual machines (VMs) SQL in an Azure VM Azure Files SAP HANA in Azure VM Azure Backup Server Azure Backup Agent Data Protection Manager | Azure Backup, Azure Site Recovery |
+
+### Design for Azure blob backup and recovery
+
+#### Blob soft delete and versioning
+
+![Soft delete](Images/soft-delete.png)
+
+- **Container soft delete** can restore a container and its contents at the time of deletion. The retention period for deleted containers is between 1 and 365 days. The default retention period is seven days.
+- **Blob soft delete** can restore a blob, snapshot, or version that has been deleted. Blob soft delete is useful for restoring specific files. The retention period for deleted blobs is also between 1 and 365 days.
+- **Blob versioning** works to automatically maintain previous versions of a blob. When blob versioning is enabled, you can restore an earlier version of a blob. Versioning lets you recover your data if it’s incorrectly modified or deleted. Blob versioning is useful if you have multiple authors editing files and need to maintain or restore their individual changes.
+
+### Design for Azure files backup and recovery
+
+![Azue file share backup](Images/file-share-backup.png)
+
+#### Azure files backup details
+
+- Share snapshots capture the share state at that point in time.
+- Snapshots can be created manually using the Azure portal, REST API, client libraries, the Azure CLI, and PowerShell.
+- Snapshots can be automated using Azure Backup and backup policies.
+- Snapshots are at the root level of a file share and apply to all the folders and files contained in it. Retrieval is provided at individual file level.
+- Snapshots are incremental. Only the deltas between your snapshots will be stored.
+- After a share snapshot is created, it can be read, copied, or deleted, but not modified.
+- You cannot delete a share that has share snapshots. To delete the share you must delete all the share snapshots.
+
+> When Azure Backup is enabled on the file share soft delete is also enabled.
+
+It is recommended you use Azure Backup to automate and manage file share snapshots.
+
+[Automated file share backup](Images/file-share-automated.png)
+
+#### Considerations for file share backups
+
+- **Use instant restore.** Azure file share backup uses file share snapshots. You can select just the files you want to restore instantly.
+- **Implement alerting and reporting.** You can configure alerts for backup and restore failures and use the reporting solution provided by Azure Backup. These reports provide insights on file share backups.
+- **Consider self-service restore.** Backup uses server endpoint VSS snapshots. Consider giving advanced users the ability to restore files themselves.
+- **Consider on-demand backups.** Azure Backup policies are limited to scheduling a backup once a day. If a user creates a file in the morning and works on it all day a nightly backup won’t have the new file. For these reasons consider on-demand backups for the most critical file shares.
+- **Organize file shares for backup.** If possible, consider organizing your file shares for backups. For example, public facing vs internal file shares.
+- **Snapshot before code deployments.** If a bug or application error is introduced with the new deployment, you can go back to a previous version of your data on that file share. To help protect against these scenarios, you can take a share snapshot before you deploy new application code.
+
+### Design for Azure virtual machine backup and recovery
+
+![Virtual Machine backups](Images/virtual-machine-backups.png)
+
+#### Considerations for virtual machine backups and restore
+
+Here are some things to consider when planning your virtual machine backups.
+
+- **Identify the best backup schedule.** To distribute backup traffic, consider backing up different VMs at different times of the day and make sure the times don't overlap. Ensure the backup scheduled start time is during non-peak production application times.
+- **Determine backup frequency.** Implement both short-term (daily) and long-term (weekly) backups. If you need to take a backup not scheduled via backup policy, then you can use an on-demand backup. For example, backup on-demand multiple times per day when scheduled backup permits only one backup per day.
+- **Create backup policies.** Consider grouping VMs that require the same schedule start time, frequency, and retention settings into a single backup policy. For example, create policies for critical and non-critical virtual machines.
+- **Monitor and review your plan.** As your business requirements change, make sure to review and change your backup policies. Enable monitoring and alerting features and review the results.
+- **Practice restoring from backup.** Restoring backups can be very time-consuming. The total restore time depends on the Input/output operations per second (IOPS) and the throughput of the storage account. The total restore time can be affected if the target storage account is loaded with other application read and write operations. To improve restore operation, select a storage account that isn't loaded with other application data.
+- **Consider throttling.** If you're restoring VMs from a single vault, we highly recommend that you use different general-purpose v2 storage accounts to ensure that the target storage account doesn't get throttled. For example, each VM must have a different storage account. For example, if 10 VMs are restored, use 10 different storage accounts.
+- **Consider Cross Region Restore (CRR).** CRR allows you to restore Azure VMs in a secondary region, which is an Azure paired region. This option lets you conduct drills to meet audit or compliance requirements. You can also restore the VM or its disk if there's a disaster in the primary region. CRR is an opt-in feature for any recovery services vault. CRR also works for SQL databases and SAP HANA databases hosted on Azure VMs.
+
+### Design Azure SQL backup and recovery
+
+#### SQL Automated backup overview
+
+- **Full backups:** In a full backup, everything in the database and the transaction logs is backed up. SQL Database makes a full back up once a week.
+- **Differential backups:** In a differential backup, everything that changed since the last full backup is backed up. SQL Database makes a differential backup every 12 - 24 hours.
+- **Transactional backups:** In a transactional backup, the contents of the transaction logs are backed up. If the latest transaction log has failed or is corrupted, the option is to fall back to the previous transaction log backup. Transactional backups enable administrators to restore up to a specific time, which includes the moment before data was mistakenly deleted. Transaction log backups every five to 10 minutes.
+
+#### SQL backup use cases
+
+- **Restore an existing database** to a point in time in the past within the retention period. This operation creates a new database on the same server as the original database but uses a different name to avoid overwriting the original database. After the restore completes, you can delete the original database.
+- **Restore a deleted database to the time of deletion** or to any point in time within the retention period. The deleted database can be restored only on the same server or managed instance where the original database was created.
+- **Restore a database to another geographic region.** Geo-restore allows you to recover from a geographic disaster when you cannot access your database or backups in the primary region. It creates a new database on any existing server or managed instance, in any Azure region.
+- **Restore a database from a specific long-term backup** of a single database or pooled database. If the database has been configured with a long-term retention policy you can restore an old version of the database.
+
+#### Long-term backup retention policies
+
+Azure SQL Database automatic backups remain available to restore for up to 35 days. This period is enough for the purposes of day-to-day administration. But sometimes you might need to retain data for longer periods. For example, data protection regulations in your local jurisdiction might require you to keep backups for several years.
+
+For these requirements, use the long-term retention (LTR) feature. This way, you can store Azure SQL Database backups in read-access geo-redundant storage (RA-GRS) blobs for up to 10 years. If you need access to any backup in LTR, you can restore it as a new database by using either the Azure portal or PowerShell.
+
+### Design for Azure Site Recovery
+
+![Azure Site Recovery](Images/azure-site-recovery.png)
+
+#### What can you do with Azure Site Recovery?
+
+| **Feature**                        | **Details**                                                                                                                                                                                                                                                                                                            |
+|------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Simple BCDR solution               | Use Site Recovery in the Azure portal to setup and manage replication, failover, and failback from a single location.                                                                                                                                                                                                  |
+| Azure VM replication               | Setup disaster recovery of your Azure VMs, and failover from a primary region to a secondary region.                                                                                                                                                                                                                   |
+| On-premises VM replication         | Replicate on-premises VMs and physical servers to Azure, or to a secondary on-premises datacenter.                                                                                                                                                                                                                     |
+| Workload replication               | Replicate any workload running on supported Azure VMs, on-premises Hyper-V and VMware VMs, and Windows or Linux physical servers.                                                                                                                                                                                      |
+| Data resilience                    | Orchestrate replication without intercepting app data by using Site Recovery. When failover occurs, Azure VMs are created, based on the replicated data. When you replicate to Azure, data is stored in Azure storage, with the resilience that provides.                                                              |
+| RTO and RPO targets                | Keep RTO and RPO within defined organizational limits. Site Recovery provides continuous replication for Azure VMs and VMware VMs, and replication frequency as low as 30 seconds for Hyper-V.                                                                                                                         |
+| Keep apps consistent over failover | By using app-consistent snapshots, you can replicate using recovery points. These snapshots capture disk data, data in memory, and all in process transactions.                                                                                                                                                        |
+| Testing without disruption         | You can run disaster recovery tests, without affecting ongoing replication.                                                                                                                                                                                                                                            |
+| Flexible failovers                 | You can run planned failovers for expected outages with no data loss. Run unplanned failovers with minimal data loss. And fail back to your primary site when it's available again.                                                                                                                                    |
+| Customized recovery plans          | Create recovery plans so that you can customize and sequence the failover and recovery of your multi-tier apps running on multiple VMs. You can group machines together in a recovery plan. You can then, optionally, add scripts and manual actions. You can integrate recovery plans with Azure Automation runbooks. |
+| BCDR integration                   | You can integrate Site Recovery with other BCDR technologies. For example, use Site Recovery to protect the SQL Server backend of your corporate workloads. Because of its native support for SQL Server AlwaysOn, you can manage the failover of availability groups.                                                 |
+| Azure Automation integration       | Download, from the Azure Automation library, and integrate app-specific scripts with Site Recovery.                                                                                                                                                                                                                    |
+![Site Recovery](Images/site-recovery.png)
+
