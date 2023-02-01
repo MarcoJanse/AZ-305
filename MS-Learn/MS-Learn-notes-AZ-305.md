@@ -78,6 +78,18 @@
       - [Long-term backup retention policies](#long-term-backup-retention-policies)
     - [Design for Azure Site Recovery](#design-for-azure-site-recovery)
       - [What can you do with Azure Site Recovery?](#what-can-you-do-with-azure-site-recovery)
+  - [Design data storage solutions](#design-data-storage-solutions)
+    - [Storage account types](#storage-account-types)
+    - [Azure Blob storage](#azure-blob-storage)
+  - [Azure Blog immutable storage](#azure-blog-immutable-storage)
+    - [Azure Files](#azure-files)
+      - [Performance level](#performance-level)
+    - [Comparison chart between Azure Blob, Azure Files and Azure NetApp Files](#comparison-chart-between-azure-blob-azure-files-and-azure-netapp-files)
+    - [Managed Disks](#managed-disks)
+    - [Design for Storage Security](#design-for-storage-security)
+      - [Security Options that can be used:](#security-options-that-can-be-used)
+      - [Service endpoints](#service-endpoints)
+      - [Private endpoints](#private-endpoints)
 
 
 ## Governance
@@ -725,3 +737,78 @@ For these requirements, use the long-term retention (LTR) feature. This way, you
 | Azure Automation integration       | Download, from the Azure Automation library, and integrate app-specific scripts with Site Recovery.                                                                                                                                                                                                                    |
 ![Site Recovery](Images/site-recovery.png)
 
+## Design data storage solutions
+
+### Storage account types
+
+| **Storage account**         | **Supported services**                                                                    | **Recommended usage**                                                                                                                                                                                                                                                               |
+|-----------------------------|-------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Standard general-purpose v2 | Blob Storage (including Data Lake Storage), Queue Storage, Table Storage, and Azure Files | Standard storage account for most scenarios, including blobs, file shares, queues, tables, and disks (page blobs).                                                                                                                                                                  |
+| Premium block blobs         | Blob Storage (including Data Lake Storage)                                                | Premium storage account for block blobs and append blobs. Recommended for applications with high transaction rates. Use Premium block blobs if you work with smaller objects or require consistently low storage latency. This storage is designed to scale with your applications. |
+| Premium file shares         | Azure Files                                                                               | Premium storage account for file shares only. Recommended for enterprise or high-performance scale applications. Use Premium file shares if you require support for both Server Message Block (SMB) and NFS file shares.                                                            |
+| Premium page blobs          | Page blobs only                                                                           | Premium high-performance storage account for page blobs only. Page blobs are ideal for storing index-based and sparse data structures, such as operating systems, data disks for virtual machines, and databases.                                                                   |
+
+### Azure Blob storage
+
+| **Comparison**               | **Premium Blob Storage**                               | **Hot access tier**                                    | **Cool access tier**                                   | **Archive access tier**                                  |
+|------------------------------|--------------------------------------------------------|--------------------------------------------------------|--------------------------------------------------------|----------------------------------------------------------|
+| Availability                 | 99.9%                                                  | 99.9%                                                  | 99%                                                    | Offline                                                  |
+| Availability (RA-GRS reads)  | N/A                                                    | 99.99%                                                 | 99.9%                                                  | Offline                                                  |
+| Latency (time to first byte) | Single-digit milliseconds                              | milliseconds                                           | milliseconds                                           | hours                                                    |
+| Minimum storage duration     | N/A                                                    | N/A                                                    | 30 days                                                | 180 days                                                 |
+| Usage costs                  | Higher storage costs, Lower access & transaction costs | Higher storage costs, Lower access & transaction costs | Lower storage costs, Higher access & transaction costs | Lowest storage costs, Highest access & transaction costs |
+
+## Azure Blog immutable storage
+
+[Immutable storage](https://learn.microsoft.com/en-us/azure/storage/blobs/immutable-storage-overview) for Azure Blob Storage enables users to store business-critical data in a WORM (Write Once, Read Many) state. While in a WORM state, data can't be modified or deleted for a user-specified interval. By configuring immutability policies for blob data, you can protect your data from overwrites and deletes. Policies are applied at the container level and audit logs are available.
+
+![Immutable Storage](Images/container-policies.png)
+
+### Azure Files
+
+#### Performance level
+
+| **Support** | **Standard account**      | **Premium account**       |
+|-------------|---------------------------|---------------------------|
+| Latency     | Double-digit milliseconds | Single-digit milliseconds |
+| IOPS        | 10,000 IOPS               | 100,000 IOPS              |
+| Bandwidth   | 300 Mbps                  | 5 Gbps                    |
+
+### Comparison chart between Azure Blob, Azure Files and Azure NetApp Files
+
+| **Comparison**           | **Azure Blob Storage**                                                                                                                                                                                                                 | **Azure Files**                                                                                                                                                                                                                                                                                                                                 | Azure NetApp Files                                                                                                                                                                                                                                                |
+|--------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Description              | Azure Blob Storage is best suited for large scale read-heavy sequential access workloads where data is ingested once and modified later.  Blob Storage offers the lowest total cost of ownership, if there's little or no maintenance. | Azure Files is a highly available service best suited for random access workloads.  For NFS shares, Azure Files provides full POSIX file system support and can easily be used from container platforms like Azure Container Instance (ACI) and Azure Kubernetes Service (AKS) with the built-in CSI driver, in addition to VM-based platforms. | Azure NetApp Files is a fully managed file service in the cloud, powered by NetApp, with advanced management capabilities.  NetApp Files is suited for workloads that require random access and provides broad protocol support and data protection capabilities. |
+| Use cases                | Large scale analytical data, Throughput sensitive high-performance computing, Backup and archive, Autonomous driving, Media rendering, or Genomic sequencing                                                                           | Shared files, Databases, Home directories, Traditional applications, ERP, CMS, NAS migrations that don't require advanced management, Custom applications that require scale-out file storage                                                                                                                                                   | On-premises enterprise NAS migration that requires rich management capabilities, Latency sensitive workloads like SAP HANA, Latency-sensitive or IOPS intensive high performance compute, Workloads that require simultaneous multi-protocol access               |
+| Available protocols      | - NFS 3.0 - REST - Data Lake Storage Gen2                                                                                                                                                                                              | - SMB - NFS 4.1 - REST                                                                                                                                                                                                                                                                                                                          | - NFS 3.0 and 4.1 - SMB                                                                                                                                                                                                                                           |
+| Performance (per volume) | Up to 20,000 IOPS, Up to 100 GiB/s throughput                                                                                                                                                                                          | Up to 100,000 IOPS, Up to 80 Gib/s throughput                                                                                                                                                                                                                                                                                                   | Up to 460,000 IOPS, Up to 36 Gib/s throughput                                                                                                                                                                                                                     |
+
+### Managed Disks
+
+| **Comparison** | **Ultra-disk**                                                                                                          | **Premium SSD**                                | **Standard SSD**                                                           | **Standard HDD**                        |
+|----------------|-------------------------------------------------------------------------------------------------------------------------|------------------------------------------------|----------------------------------------------------------------------------|-----------------------------------------|
+| Disk type      | SSD                                                                                                                     | SSD                                            | SSD                                                                        | HDD                                     |
+| Scenario       | IO-intensive workloads, such as SAP HANA, top tier databases like SQL and Oracle, and other transaction-heavy workloads | Production and performance sensitive workloads | Web servers, Lightly used enterprise applications, Development and testing | Backup, Non-critical, Infrequent access |
+| Max throughput | 2,000 Mbps                                                                                                              | 900 Mbps                                       | 750 Mbps                                                                   | 500 Mbps                                |
+| Max IOPS       | 160,000                                                                                                                 | 20,000                                         | 6,000                                                                      | 2,000                                   |
+
+### Design for Storage Security
+
+#### Security Options that can be used:
+
+- [Azure security baseline for Azure Storage](https://learn.microsoft.com/en-us/security/benchmark/azure/baselines/storage-security-baseline) grants limited access to Azure Storage resources. Azure security baseline provides a comprehensive list of ways to secure your Azure storage.
+- [Shared access signatures](https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview) provide secure delegated access to resources in your storage account. With a SAS, you have granular control over how a client can access your data.
+- [Firewall policies and rules](https://learn.microsoft.com/en-us/azure/storage/common/storage-network-security) limit access to your storage account. Requests can be limited to specific IP addresses or ranges, or to a list of subnets in an Azure virtual network. The Azure Storage firewall provides access control for the public endpoint of your storage account.
+- [Virtual network service endpoints](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview) restrict network access and provide direct connection to your Azure storage. You can secure storage accounts to your virtual network, and enable private IP addresses in the virtual network to reach the service endpoint. With private endpoints, you can create a special network interface for an Azure service in your virtual network.
+- [Secure transfer](https://learn.microsoft.com/en-us/azure/storage/common/storage-require-secure-transfer) enables an Azure storage account to accept requests from secure connections. When you require secure transfer, any requests originating from non-secure connections are rejected. Microsoft recommends that you always require secure transfer for all your storage accounts.
+- Data in your storage account is automatically encrypted. Azure Storage encryption offers two ways to manage encryption keys at the storage account level:
+  - Microsoft-managed keys: By default, Microsoft manages the keys used to encrypt your storage account.
+  - [Customer-managed keys](https://learn.microsoft.com/en-us/azure/storage/common/storage-encryption-key-model-get): You can optionally choose to manage encryption keys for your storage account. Customer-managed keys must be stored in Azure Key Vault.
+
+#### Service endpoints
+
+![Storage endpoints](Images/storage-endpoints.png)
+
+#### Private endpoints
+
+![Private endpoints](Images/private-links.png)
