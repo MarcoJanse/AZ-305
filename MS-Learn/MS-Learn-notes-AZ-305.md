@@ -16,7 +16,7 @@
   - [Authentication and authorization](#authentication-and-authorization)
     - [Azure AD B2B](#azure-ad-b2b)
     - [Azure AD B2C](#azure-ad-b2c)
-      - [Comparision between B2B to B2C](#comparision-between-b2b-to-b2c)
+      - [Comparison between B2B to B2C](#comparison-between-b2b-to-b2c)
     - [Conditional Access](#conditional-access)
     - [Managed Identities](#managed-identities)
     - [Service principals for applications](#service-principals-for-applications)
@@ -81,15 +81,43 @@
   - [Design data storage solutions](#design-data-storage-solutions)
     - [Storage account types](#storage-account-types)
     - [Azure Blob storage](#azure-blob-storage)
-  - [Azure Blog immutable storage](#azure-blog-immutable-storage)
+    - [Azure Blob immutable storage](#azure-blob-immutable-storage)
     - [Azure Files](#azure-files)
       - [Performance level](#performance-level)
     - [Comparison chart between Azure Blob, Azure Files and Azure NetApp Files](#comparison-chart-between-azure-blob-azure-files-and-azure-netapp-files)
     - [Managed Disks](#managed-disks)
     - [Design for Storage Security](#design-for-storage-security)
-      - [Security Options that can be used:](#security-options-that-can-be-used)
+      - [Security Options that can be used](#security-options-that-can-be-used)
       - [Service endpoints](#service-endpoints)
       - [Private endpoints](#private-endpoints)
+  - [Design a data storage solution for relational data](#design-a-data-storage-solution-for-relational-data)
+    - [Things to know about Azure SQL database](#things-to-know-about-azure-sql-database)
+    - [Pricing options](#pricing-options)
+    - [SQL Managed Instance](#sql-managed-instance)
+    - [Compare Azure SQL deployment options](#compare-azure-sql-deployment-options)
+    - [Azure SQL Purchasing models and service tiers](#azure-sql-purchasing-models-and-service-tiers)
+    - [Things to know about horizontal scaling](#things-to-know-about-horizontal-scaling)
+    - [Scaling scenarios](#scaling-scenarios)
+    - [Database availability solutions](#database-availability-solutions)
+      - [Examples of different tiers and availability](#examples-of-different-tiers-and-availability)
+        - [Tiers and availability comparison](#tiers-and-availability-comparison)
+    - [Azure SQL Data encryption](#azure-sql-data-encryption)
+    - [Azure SQL Edge](#azure-sql-edge)
+      - [Things to know about Azure SQL Edge](#things-to-know-about-azure-sql-edge)
+  - [Design data integration](#design-data-integration)
+    - [Azure Data Factory](#azure-data-factory)
+    - [Things to know about Azure Data Factory](#things-to-know-about-azure-data-factory)
+    - [Azure Data Lake](#azure-data-lake)
+      - [Things to know about Azure Data Lake](#things-to-know-about-azure-data-lake)
+      - [How Azure Data Lake Storage works](#how-azure-data-lake-storage-works)
+      - [Compare Azure Data Lake with Azure Blob Storage](#compare-azure-data-lake-with-azure-blob-storage)
+    - [Azure Databricks](#azure-databricks)
+      - [Things to consider when using Azure Databricks](#things-to-consider-when-using-azure-databricks)
+    - [Azure Synapse Analytics](#azure-synapse-analytics)
+      - [Things to know about Azure Synapse Analytics](#things-to-know-about-azure-synapse-analytics)
+    - [Azure Stream Analytics](#azure-stream-analytics)
+      - [Things to know about Azure Stream Analytics](#things-to-know-about-azure-stream-analytics)
+  - [To try after the exam](#to-try-after-the-exam)
 
 
 ## Governance
@@ -206,7 +234,7 @@ Azure AD B2C is a type of Azure AD tenant for managing customer identities and t
 
 ![Azure AD B2C Flow](Images/application-registration.png)
 
-#### Comparision between B2B to B2C
+#### Comparison between B2B to B2C
 
 |                                           | **Azure AD B2B (business-to-business)**                                                                                                                                                                                                         | **Azure AD B2C (business-to-customer)**                                                                                                                                                                                                          |
 |-------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -758,7 +786,7 @@ For these requirements, use the long-term retention (LTR) feature. This way, you
 | Minimum storage duration     | N/A                                                    | N/A                                                    | 30 days                                                | 180 days                                                 |
 | Usage costs                  | Higher storage costs, Lower access & transaction costs | Higher storage costs, Lower access & transaction costs | Lower storage costs, Higher access & transaction costs | Lowest storage costs, Highest access & transaction costs |
 
-## Azure Blog immutable storage
+### Azure Blob immutable storage
 
 [Immutable storage](https://learn.microsoft.com/en-us/azure/storage/blobs/immutable-storage-overview) for Azure Blob Storage enables users to store business-critical data in a WORM (Write Once, Read Many) state. While in a WORM state, data can't be modified or deleted for a user-specified interval. By configuring immutability policies for blob data, you can protect your data from overwrites and deletes. Policies are applied at the container level and audit logs are available.
 
@@ -794,7 +822,7 @@ For these requirements, use the long-term retention (LTR) feature. This way, you
 
 ### Design for Storage Security
 
-#### Security Options that can be used:
+#### Security Options that can be used
 
 - [Azure security baseline for Azure Storage](https://learn.microsoft.com/en-us/security/benchmark/azure/baselines/storage-security-baseline) grants limited access to Azure Storage resources. Azure security baseline provides a comprehensive list of ways to secure your Azure storage.
 - [Shared access signatures](https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview) provide secure delegated access to resources in your storage account. With a SAS, you have granular control over how a client can access your data.
@@ -812,3 +840,196 @@ For these requirements, use the long-term retention (LTR) feature. This way, you
 #### Private endpoints
 
 ![Private endpoints](Images/private-links.png)
+
+## Design a data storage solution for relational data
+
+### Things to know about Azure SQL database
+
+- It's a highly scalable, intelligent, relational database service built for the cloud with the industry's highest availability SLA.
+- SQL Database is the only deployment option that supports scenarios that require very large databases (currently up to 100 TB) or autoscaling for unpredictable workloads (serverless).
+- You can create a SQL Database elastic database pool, where all databases in the pool share the same set of compute and storage resources. Each database can use the resources it needs, within the limits you set, depending on current load.
+
+### Pricing options
+
+There are two primary pricing options for SQL Database: DTU and vCore. A serverless option is also available for a single database.
+
+![Azure SQL pricing models](Images/select-azure-sql-database-pricing-model.png)
+
+- **vCore:** A vCore is a virtual core. You choose the number of virtual cores and have greater control over your compute costs. This option supports the Azure Hybrid Benefit for SQL Server and reserved capacity (pay in advance).
+- **DTU:** A DTU (Database Transaction Unit) is a combined measure of compute, storage, and I/O resources. The DTU option is a simple, preconfigured purchase option.
+- **Serverless:** A compute tier for single databases in SQL Database. The serverless model automatically scales compute, based on workload demand, and bills only for the amount of compute used.
+
+### SQL Managed Instance
+
+- You can use SQL Managed Instance to do lift-and-shift migrations to Azure without having to redesign your applications.
+- Azure SQL Managed Instance is ideal for customers interested in instance-scoped features, such as SQL Server Agent, Common language runtime (CLR), Database Mail, Distributed transactions, and Machine Learning Services.
+- SQL Managed Instance uses vCores mode. You can define the maximum CPU cores and maximum storage allocated to your managed instance. All databases within the managed instance share the resources allocated to the instance.
+- Most of the features available in SQL Server are available in SQL Managed Instance. Review this [comparison of SQL Database and SQL Managed Instance.](https://learn.microsoft.com/en-us/azure/azure-sql/database/features-comparison)
+
+### Compare Azure SQL deployment options
+
+| **Compare** | **SQL Database**                                                                                                                                                                                                                                                                     | **SQL Managed Instance**                                                                                                                                                                                                                                        | **SQL Server on Azure Virtual Machines**                                                                                                                                                                                                                                                                                                                            |
+|-------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Scenarios   | Best for modern cloud applications, hyperscale or serverless configurations                                                                                                                                                                                                          | Best for most lift-and-shift migrations to the cloud, instance-scoped features                                                                                                                                                                                  | Best for fast migrations, and applications that require OS-level access                                                                                                                                                                                                                                                                                             |
+| Features    | Single database - Hyperscale storage (for databases up to 100 TB) - Serverless compute - Fully managed service  Elastic pool - Resource sharing between multiple databases for price optimization - Simplified performance management for multiple databases - Fully managed service | Single instance - SQL Server surface area (vast majority) - Native virtual networks - Fully managed service  Instance pool - Pre-provision compute resources for migration - Cost-efficient migration - Host smaller instances (2vCore) - Fully managed service | Azure Virtual Machines - SQL Server access - OS-level server access - Expansive version support for SQL Server - Expansive OS version support - File stream, Microsoft Distributed Transaction Coordinator (DTC), and Simple Recovery model - SQL Server Integration Services (SSIS), SQL Server Reporting Services (SSRS), and SQL Server Analysis Services (SSAS) |
+
+### Azure SQL Purchasing models and service tiers
+
+| **DTU model**                      | **vCore model**                             |
+|------------------------------------|---------------------------------------------|
+| Basic, Standard, and Premium tiers | General Purpose and Business Critical tiers |
+
+![Elastic Pool tiers](Images/elastic-pools.png)
+
+### Things to know about horizontal scaling
+
+Horizontal scaling is managed by using the SQL Database Elastic Database client library. There are two ways to apply horizontal scaling: read scale-out provisioning and sharding.
+
+- **Sharding:** Partition data across a set of SQL databases that are identically structured. A set consists of a primary read-write replica and secondary read-only replicas. You can split large databases into smaller components to improve performance and make them easier to manage.
+- **Read scale-out:** Load-balance read-only workloads for a set of SQL databases. Offload read-only workloads by using the compute capacity of a read-only replica, instead of running workloads on the read-write replica. Isolate some read-only workloads from the read-write workloads and not affect performance. The following table shows support for read scale-out provisioning in Azure SQL Database and Azure SQL Managed Instance:
+
+| **Azure SQL Managed Instance**                                            | **Azure SQL Database**                                                                    |
+|---------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| Basic, Standard, and General Purpose tiers: Read scale-out is unavailable | Basic, Standard, and General Purpose tiers: Read scale-out is unavailable                 |
+| Business Critical tier: Read scale-out is auto-provisioned                | Business Critical and Premium tiers: Read scale-out is auto-provisioned                   |
+| No applicable tier                                                        | Hyperscale tier: Read scale-out is available if at least one secondary replica is created |
+
+### Scaling scenarios
+
+| **Scenario**                                                                                                                                                                 | **Scaling solution**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Manage and scale multiple Azure SQL databases that have varying and unpredictable resource requirements                                                                      | Elastic database pools and vertical scaling. Use elastic database pools to ensure databases get the performance resources they need when they need it. Elastic pools provide a simple resource allocation mechanism within a predictable budget. There's no per-database charge for elastic pools. You're billed for each hour a pool exists at the highest eDTU or vCores, regardless of usage or whether the pool was active for less than an hour.                                                                                                               |
+| Different sections of a database reside in different geographic locations for compliance reasons                                                                             | Horizontal scaling and sharding. Use sharding to split your data into several databases and scale them independently. The shard map manager is a special database that maintains global mapping information about all shards (databases) in a shard set. The metadata allows an application to connect to the correct database based on the value of the sharding key.                                                                                                                                                                                              |
+| Dependency support for commercial BI or data integration tools, where multiple databases contribute rows into a single overall result for use in Excel, Power BI, or Tableau | Elastic database tools and elastic query. Use the Elastic database tools elastic query feature to access data spread across multiple databases. Elastic query is available on the Standard tier. Querying can be done in T-SQL that spans multiple databases in Azure SQL Database. Run cross-database queries to access remote tables, and to connect Microsoft and third-party tools (Excel, Power BI, Tableau, and so on) and query across data tiers. You can scale out queries to large data tiers and visualize the results in business intelligence reports. |
+
+### Database availability solutions
+
+#### Examples of different tiers and availability
+
+![General purpose tier](Images/general-purpose-availability.png)
+
+![Business Critical tier](Images/business-critical-availability.png)
+
+![Hyperscale tier](Images/hyperscale-architecture.png)
+
+##### Tiers and availability comparison
+
+| **SQL Database vCore tiers** | **SQL Managed Instance DTU tiers** | **Database availability support**                                                                   |
+|------------------------------|------------------------------------|-----------------------------------------------------------------------------------------------------|
+| General Purpose              | Standard or Basic                  | Provides balanced compute and storage options for business workloads                                |
+| Business Critical            | Premium                            | Meets low latency requirements and enables highest resilience to failures for business applications |
+| Hyperscale                   | No applicable tier                 | Offers highly scalable storage and meets read-scale requirements for business workloads             |
+
+### Azure SQL Data encryption
+
+| **Data state**  | **Encryption method**                                       | **Encryption level**                                      |
+|-----------------|-------------------------------------------------------------|-----------------------------------------------------------|
+| Data at rest    | Transparent data encryption (TDE)                           | Always encrypted                                          |
+| Data in motion  | Secure Socket Layers and Transport Layer Security (SSL/TLS) | Always encrypted                                          |
+| Data in process | Dynamic data masking                                        | Specific data is unencrypted, Remaining data is encrypted |
+
+### Azure SQL Edge
+
+[Azure SQL Edge](https://learn.microsoft.com/en-us/azure/azure-sql-edge/overview) is an optimized relational database engine geared for IoT and IoT Edge deployments. Azure SQL Edge is built on the same engine as SQL Server and Azure SQL. Developers with SQL Server skills can reuse their code to build edge-specific solutions on Azure SQL Edge. Azure SQL Edge provides capabilities to stream, process, and analyze relational and non-relational data.
+
+#### Things to know about Azure SQL Edge
+
+- Azure SQL Edge is a containerized Linux application. The startup-memory footprint is less than 500 MB.
+- You can design and build apps that run on many IoT devices. Capture continuous data streams in real time, or integrate data in a comprehensive organizational data solution. The following diagram shows how SQL Edge captures and stores streaming data.
+
+![Azure SQL Edge](Images/sql-edge.png)
+
+## Design data integration
+
+### Azure Data Factory
+
+![Azure Data Factory overview](Images/azure-data-factory-overview.png)
+
+### Things to know about Azure Data Factory
+
+- **Connect and collect.** First, ingest the data to collect all the data from different sources into a centralized location.
+- **Transform and enrich.** Next, transform the data by using a compute service like Azure Databricks and Azure HDInsight Hadoop.
+- **Provide continuous integration and delivery (CI/CD) and publish.** Support CI/CD by using GitHub and Azure DevOps to deliver the ETL process incrementally before publishing the data to the analytics engine.
+- **Monitor.** Finally, use the Azure portal to monitor the pipeline for scheduled activities and for any failures.
+
+### Azure Data Lake
+
+A data lake is a repository of data that's stored in its natural format, usually as blobs or files. [Azure Data Lake](https://azure.microsoft.com/solutions/data-lake/) Storage is a comprehensive, scalable, and cost-effective data lake solution for big data analytics built into Azure. Azure Data Lake Storage combines a file system with a storage platform to help you quickly identify insights into your data. The solution builds on Azure Blob Storage capabilities to provide optimizations for analytics workloads. This integration enables analytics performance, high-availability, security, and durability capabilities of Azure Storage.
+
+#### Things to know about Azure Data Lake
+
+- Azure Data Lake Storage can store any type of data by using the data's native format. With support for any data format and massive data sizes, Azure Data Lake Storage can work with structured, semi-structured, and unstructured data.
+- The solution is primarily designed to work with Hadoop and all frameworks that use the Apache Hadoop Distributed File System (HDFS) as their data access layer. Data analysis frameworks that use HDFS as their data access layer can directly access.
+- Azure Data Lake Storage supports high throughput for input and output–intensive analytics and data movement.
+The Azure Data Lake Storage access control model supports both Azure role-based access control (RBAC) and Portable Operating System Interface for UNIX (POSIX) access control lists (ACLs).
+- Azure Data Lake Storage utilizes Azure Blob replication models. These models provide data redundancy in a single datacenter with locally redundant storage (LRS).
+- Azure Data Lake Storage offers massive storage and accepts numerous data types for analytics.
+- Azure Data Lake Storage is priced at Azure Blob Storage levels.
+
+#### How Azure Data Lake Storage works
+
+1. **Ingest data.** Azure Data Lake Storage offers many different data ingestion methods:
+   1. For unplanned data, you can use tools like AzCopy, the Azure CLI, PowerShell, and Azure Storage Explorer.
+   2. For relational data, the Azure Data Factory service can be used. You can transfer data from any source, such as Azure Cosmos DB, SQL Database, Azure SQL Managed instances, and more.
+   3. For streaming data, you can use tools like Apache Storm on Azure HDInsight, Azure Stream Analytics, and so on.
+2. **Access stored data.** The easiest way to access your data is to use Azure Storage Explorer. Storage Explorer is a standalone application with a graphical user interface (GUI) for accessing your Azure Data Lake Storage data. You can also use PowerShell, the Azure CLI, HDFS CLI, or other programming language SDKs for accessing the data.
+3. **Configure access control.** Control who can access the data stored in Azure Data Lake Storage by implementing an authorization mechanism. You can choose Azure RBAC or ACL.
+
+#### Compare Azure Data Lake with Azure Blob Storage
+
+| **Compare**           | **Azure Data Lake**                                    | **Azure Blob Storage**                                                                                   |
+|-----------------------|--------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
+| Data types            | Good for storing large volumes of text data            | Good for storing unstructured non-text based data like photos, videos, and backups                       |
+| Geographic redundancy | Must manually configure data replication               | Provides geo-redundant storage by default                                                                |
+| Namespaces            | Supports hierarchical namespaces                       | Supports flat namespaces                                                                                 |
+| Hadoop compatibility  | Hadoop services can use data stored in Azure Data Lake | By using Azure Blob Filesystem Driver, applications and frameworks can access data in Azure Blob Storage |
+| Security              | Supports granular access                               | Granular access isn't supported                                                                          |
+
+### Azure Databricks
+
+[Azure Databricks](https://learn.microsoft.com/en-us/azure/databricks/introduction/) is a fully managed, cloud-based Big Data and Machine Learning platform, which empowers developers to accelerate AI and innovation. Azure Databricks provides data science and engineering teams with a single platform for big data processing and Machine Learning. The Azure Databricks managed Apache Spark platform makes it simple to run large-scale Spark workloads.
+
+#### Things to consider when using Azure Databricks
+
+- **Consider data science preparation of data.** Create, clone, and edit clusters of complex, unstructured data. Turn the data clusters into specific jobs. Deliver the results to data scientists and data analysts for review.
+- **Consider insights in the data.** Implement Azure Databricks to build recommendation engines, churn analysis, and intrusion detection.
+- **Consider productivity across data and analytics teams.** Create a collaborative environment and shared workspaces for data engineers, analysts, and scientists. Teams can work together across the data science lifecycle with shared workspaces, which helps to save valuable time and resources.
+- **Consider big data workloads.** Exercise Azure Data Lake and the engine to get the best performance and reliability for your big data workloads. Create no-fuss multi-step data pipelines.
+- **Consider machine learning programs.** Take advantage of the integrated end-to-end machine learning environment. It incorporates managed services for experiment tracking, model training, feature development and management, and feature and model serving.
+
+### Azure Synapse Analytics
+
+[Azure Synapse Analytics](https://azure.microsoft.com/products/synapse-analytics/) combines features of big data analytics, enterprise data storage, and data integration. The service lets you run queries on serverless data or data at scale. Azure Synapse supports data ingestion, exploration, transformation, and management, and supports analysis for all your BI and machine learning needs.
+
+#### Things to know about Azure Synapse Analytics
+
+Azure Synapse Analytics implements a massively parallel processing (MPP) architecture and has the following characteristics.
+
+- The Azure Synapse Analytics architecture includes a control node and a pool of compute nodes.
+- The control node is the brain of the architecture. It's the front end that interacts with all applications. The compute nodes provide the computational power. The data to be processed is distributed evenly across the nodes.
+- You submit queries in the form of Transact-SQL statements, and Azure Synapse Analytics runs them.
+- Azure Synapse uses a technology named PolyBase that enables you to retrieve and query data from relational and non-relational sources. You can save the data read in as SQL tables within the Azure Synapse service.
+
+![Azure Synapse Analytics](Images/azure-synapse.png)
+
+Azure Synapse Analytics is composed of five elements
+
+![Azure Synapse Analytics Overview](Images/azure-synapse-analytics-overview.png)
+
+### Azure Stream Analytics
+
+The process of consuming data streams, analyzing them, and deriving actionable insights is called stream processing. [Azure Stream Analytics](https://github.com/GitHubber17/learn-pr/blob/update-az-305-data-integration-1/azure/stream-analytics/stream-analytics-introduction) is a fully managed (PaaS offering), real-time analytics and complex event-processing engine. It offers the possibility to perform real-time analytics on multiple streams of data from sources like IoT device data, sensors, clickstreams, and social media feeds.
+
+#### Things to know about Azure Stream Analytics
+
+Azure Stream Analytics works on the following concepts:
+
+- **Data streams:** Data streams are continuous data generated by applications, IoT devices, or sensors. The data streams are analyzed and actionable insights are extracted. Some examples are monitoring data streams from industrial and manufacturing equipment and monitoring water pipeline data by utility providers. Data streams help us understand change over time.
+- **Event processing:** Event processing refers to consumption and analysis of a continuous data stream to extract actionable insights from the events happening within that stream. An example is how a car passing through a tollbooth should include temporal information like a timestamp that indicates when the event occurred.
+
+![Azure Stream Analytics pipeline](Images/stream-analytics-end-to-end-pipeline.png)
+
+## To try after the exam
+
+1. [Azure DevOps Cloud Adoption plan](https://learn.microsoft.com/en-us/training/modules/cloud-adoption-framework-plan/3-exercise-cloud-adoption-plan)
+2. [Fully read the Azure Migrate part](https://learn.microsoft.com/en-us/training/modules/cloud-adoption-framework-plan/4-exercise-digital-estate-assessment)
