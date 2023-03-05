@@ -1,6 +1,7 @@
 # MS-Learn notes AZ-305
 
 ## Index
+
 - [MS-Learn notes AZ-305](#ms-learn-notes-az-305)
   - [Index](#index)
   - [Governance](#governance)
@@ -21,6 +22,8 @@
     - [Managed Identities](#managed-identities)
     - [Service principals for applications](#service-principals-for-applications)
     - [Key Vault](#key-vault)
+      - [Key Vault availability and redundancy](#key-vault-availability-and-redundancy)
+        - [Caveats to be aware of](#caveats-to-be-aware-of)
   - [Monitor](#monitor)
     - [Overview of Azure Monitor](#overview-of-azure-monitor)
     - [Characteristics of Azure Monitor](#characteristics-of-azure-monitor)
@@ -30,6 +33,7 @@
     - [Azure Workbooks](#azure-workbooks)
     - [Azure Data Explorer](#azure-data-explorer)
   - [Networking](#networking)
+    - [Compare Network Services](#compare-network-services)
     - [Virtual Network (vNET)](#virtual-network-vnet)
       - [Address space](#address-space)
   - [Design business continuity](#design-business-continuity)
@@ -43,7 +47,7 @@
     - [High Availability for Compute](#high-availability-for-compute)
       - [Availability zones](#availability-zones)
       - [VM HA options](#vm-ha-options)
-      - [Zonal architucture](#zonal-architucture)
+      - [Zonal architecture](#zonal-architecture)
       - [Zone-redundant architecture](#zone-redundant-architecture)
     - [Virtual Machine Scale set options](#virtual-machine-scale-set-options)
     - [Highly Available Container solution](#highly-available-container-solution)
@@ -117,8 +121,29 @@
       - [Things to know about Azure Synapse Analytics](#things-to-know-about-azure-synapse-analytics)
     - [Azure Stream Analytics](#azure-stream-analytics)
       - [Things to know about Azure Stream Analytics](#things-to-know-about-azure-stream-analytics)
+  - [Design an Azure compute solution](#design-an-azure-compute-solution)
+    - [Virtual Machine sizes](#virtual-machine-sizes)
+    - [Azure Batch](#azure-batch)
+      - [Azure Batch pool allocation modes](#azure-batch-pool-allocation-modes)
+    - [Azure App Service](#azure-app-service)
+      - [Things to consider when using Azure App Service](#things-to-consider-when-using-azure-app-service)
+    - [Azure Container Instances](#azure-container-instances)
+      - [Compare Azure Container Instances to Azure Virtual Machines](#compare-azure-container-instances-to-azure-virtual-machines)
+    - [Azure Logic Apps](#azure-logic-apps)
+      - [Compare Azure Logic Apps and Azure Functions](#compare-azure-logic-apps-and-azure-functions)
+      - [Single Tenant versus multi-tenant and ISE for Azure Logic Apps](#single-tenant-versus-multi-tenant-and-ise-for-azure-logic-apps)
+  - [Design an application architecture](#design-an-application-architecture)
+    - [Message and Event scenarios](#message-and-event-scenarios)
+      - [Difference between messages and events](#difference-between-messages-and-events)
+      - [Azure Queue storage](#azure-queue-storage)
+      - [Azure Service Bus](#azure-service-bus)
+      - [Compare Azure Service Bus with Azure Queue storage](#compare-azure-service-bus-with-azure-queue-storage)
+    - [Event Hubs](#event-hubs)
+    - [Event Grid](#event-grid)
+      - [Compare Event Grid with Event Hubs and Service Bus](#compare-event-grid-with-event-hubs-and-service-bus)
+    - [Azure API Management](#azure-api-management)
+    - [Azure App Configuration](#azure-app-configuration)
   - [To try after the exam](#to-try-after-the-exam)
-
 
 ## Governance
 
@@ -320,6 +345,34 @@ Things to consider with key vault:
   - Define the client's permissions for those resources.
   - Specify how long the client's shared access signature is valid.
 
+#### Key Vault availability and redundancy
+
+The contents of your key vault are replicated within the region and to a secondary region at least 150 miles away, but within the same geography to maintain high durability of your keys and secrets
+
+In the rare event that an entire Azure region is unavailable, the requests that you make of Azure Key Vault in that region are automatically routed (failed over) to a secondary region (except as noted). When the primary region is available again, requests are routed back (failed back) to the primary region. Again, you don't need to take any action because this happens automatically.
+
+##### Caveats to be aware of
+
+- In the event of a region failover, it may take a few minutes for the service to fail over. Requests made during this time before failover may fail.
+- If you're using private link to connect to your key vault, it may take up to 20 minutes for the connection to be re-established in the event of a failover.
+- During failover, your key vault is in read-only mode. Requests supported in this mode:
+  - List certificates
+  - Get certificates
+  - List secrets
+  - Get secrets
+  - List keys
+  - Get (properties of) keys
+  - Encrypt
+  - Decrypt
+  - Wrap
+  - Unwrap
+  - Verify
+  - Sign
+  - Backup
+- During failover, you won't be able to make changes to key vault properties. You won't be able to change access policy or firewall configurations and settings.
+
+After a failover is failed back, all request types (including read and write requests) are available.
+
 ## Monitor
 
 - **Azure Monitor Logs** lets you collect and organize data from resources that you monitor. You configure what data is gathered and how it's organized in the platform. Other features in Azure Monitor automatically store their data in Logs. You can use the stored data with your collected data to help monitor the performance of your environment.
@@ -424,7 +477,16 @@ Azure Data Explorer provides greater flexibility for building quick and easy nea
 Below is an image of a monitoring solution that utilizes Data Explorer
 
 ![Monitoring solution utilizing Azure Data Explorer](Images/azure-data-explorer.png)
+
 ## Networking
+
+### Compare Network Services
+
+| **Compare** | **Azure VPN Gateway**                                                                                                                                                | **Azure ExpressRoute**                                                                                                                                                                                                                                                                                               | **ExpressRoute + VPN failover**                                                                                                                                                                              | **Azure Virtual WAN + hub-spoke**                                                                                                                                                                                                                                                                                                     |
+|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Benefits    | - Simple to configure - High bandwidth available (up to 10 Gbps depending on VPN Gateway SKU)                                                                        | - High bandwidth available (up to 10 Gbps depending on connectivity provider) - Supports dynamic scaling of bandwidth to help reduce costs during periods of lower demand (not supported by all connectivity providers) - Enables direct organizational access to national clouds (depends on connectivity provider) | - High availability if ExpressRoute circuit fails (fallback connection on lower bandwidth network                                                                                                            | - Reduced operational overhead by replacing existing hubs with fully managed service - Cost savings by using managed service, which removes need for NVA - Improved security via centrally managed secured hubs with Azure Firewall and Virtual WAN - Separates concerns between central IT (SecOps, InfraOps) and workloads (DevOps) |
+| Challenges  | - Requires on-premises VPN device                                                                                                                                    | - Can be complex to set up - Requires working with third-party connectivity provider - Provider responsible for provisioning network connection - Requires high-bandwidth routers on-premises                                                                                                                        | - Complex to configure - Must set up both VPN connection and ExpressRoute circuit - Requires redundant hardware (VPN appliances) - Requires redundant Azure VPN Gateway connection for which you pay charges | Note: Azure Virtual WAN is designed to reduce previously listed connectivity challenges.                                                                                                                                                                                                                                              |
+| Scenarios   | Hybrid apps with light traffic between on-premises hardware and the cloud  Able to trade slightly extended latency for flexibility and processing power of the cloud | Hybrid apps running large-scale, mission-critical workloads that require high degree of scalability                                                                                                                                                                                                                  | Hybrid apps that require higher bandwidth of ExpressRoute and highly available network connectivity                                                                                                          | Connectivity among workloads requires central control and access to shared services  Enterprise requires central control over security aspects like a firewall and segregated management for workloads in each spoke                                                                                                                  |
 
 ### Virtual Network (vNET)
 
@@ -493,7 +555,7 @@ Use these measures to plan for redundancy and determine customer SLAs.
 
 ![VM HA options](Images/virtual-machine-availability.png)
 
-#### Zonal architucture
+#### Zonal architecture
 
 ![zonal architecture](Images/zonal-architecture.png)
 
@@ -1016,9 +1078,23 @@ Azure Synapse Analytics is composed of five elements
 
 ![Azure Synapse Analytics Overview](Images/azure-synapse-analytics-overview.png)
 
+Some use cases for Azure Synapse Analytics are:
+
+- Data lake exploration
+- Data warehouse modernization
+- Machine learning
+- Business intelligence
+
 ### Azure Stream Analytics
 
 The process of consuming data streams, analyzing them, and deriving actionable insights is called stream processing. [Azure Stream Analytics](https://github.com/GitHubber17/learn-pr/blob/update-az-305-data-integration-1/azure/stream-analytics/stream-analytics-introduction) is a fully managed (PaaS offering), real-time analytics and complex event-processing engine. It offers the possibility to perform real-time analytics on multiple streams of data from sources like IoT device data, sensors, clickstreams, and social media feeds.
+
+Some use cases for Azure Stream Analytics are:
+
+- Real-time fraud detection
+- Anomaly detection
+- Smart metering
+- Dashboarding
 
 #### Things to know about Azure Stream Analytics
 
@@ -1028,6 +1104,193 @@ Azure Stream Analytics works on the following concepts:
 - **Event processing:** Event processing refers to consumption and analysis of a continuous data stream to extract actionable insights from the events happening within that stream. An example is how a car passing through a tollbooth should include temporal information like a timestamp that indicates when the event occurred.
 
 ![Azure Stream Analytics pipeline](Images/stream-analytics-end-to-end-pipeline.png)
+
+## Design an Azure compute solution
+
+### Virtual Machine sizes
+
+| **Type**                 | **Sizes**                                                                                                                                          | **Description**                                                                                                                                                                                 |
+|--------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| General purpose          | B, Dsv3, Dv3, Dasv4, Dav4, DSv2, Dv2, Av2, DC, DCv2, Dpdsv5, Dpldsv5, Dpsv5, Dplsv5, Dv4, Dsv4, Ddv4, Ddsv4, Dv5, Dsv5, Ddv5, Ddsv5, Dasv5, Dadsv5 | Balanced CPU-to-memory ratio. Ideal for testing and development, small to medium databases, and low to medium traffic web servers.                                                              |
+| Compute optimized        | F, Fs, Fsv2, FX                                                                                                                                    | High CPU-to-memory ratio. Good for medium traffic web servers, network appliances, batch processes, and application servers.                                                                    |
+| Memory optimized         | Esv3, Ev3, Easv4, Eav4, Epdsv5, Epsv5, Ev4, Esv4, Edv4, Edsv4, Ev5, Esv5, Edv5, Edsv5, Easv5, Eadsv5, Mv2, M, DSv2, Dv2                            | High memory-to-CPU ratio. Great for relational database servers, medium to large caches, and in-memory analytics.                                                                               |
+| Storage optimized        | Lsv2, Lsv3, Lasv3                                                                                                                                  | High disk throughput and IO ideal for Big Data, SQL, NoSQL databases, data warehousing and large transactional databases.                                                                       |
+| GPU                      | NC, NCv2, NCv3, NCasT4_v3, ND, NDv2, NV, NVv3, NVv4, NDasrA100_v4, NDm_A100_v4                                                                     | Specialized virtual machines targeted for heavy graphic rendering and video editing, as well as model training and inferencing (ND) with deep learning. Available with single or multiple GPUs. |
+| High performance compute | HB, HBv2, HBv3, HC                                                                                                                                 | Our fastest and most powerful CPU virtual machines with optional high-throughput network interfaces (RDMA).                                                                                     |
+
+### Azure Batch
+
+[Azure Batch](https://learn.microsoft.com/en-us/azure/batch/batch-technical-overview) runs large-scale applications efficiently in the cloud. You can schedule compute-intensive tasks and dynamically adjust resources for your solution without managing infrastructure. Azure Batch can create and manage a pool of compute nodes (virtual machines). Azure Batch can also install the application you want to run, and schedule jobs to run on the compute nodes.
+
+![Azure Batch decision flowchart](Images/select-azure-batch.png)
+
+- Azure Batch works well with applications that run independently (parallel workloads).
+- Azure Batch is effective for applications that need to communicate with each other (tightly coupled workloads). You can use Batch to build a service that runs a Monte Carlo simulation for a financial services company or a service to process images.
+- Azure Batch enables large-scale parallel and high-performance computing (HPC) batch jobs with the ability to scale to tens, hundreds, or thousands of virtual machines. When you're ready to run a job, Azure Batch:
+  - Starts a pool of compute virtual machines for you.
+  - Installs applications and staging data.
+  - Runs jobs with as many tasks as you have.
+  - Identifies failures, requeues work, and scales down the pool as work completes.
+
+![Azure Batch](Images/azure-batch.png)
+
+#### Azure Batch pool allocation modes
+
+When creating a Batch account, you can choose between two pool allocation modes: user subscription and Batch service. For most cases, you should use the default Batch service mode, in which pools are allocated behind the scenes in Azure-managed subscriptions. In the alternative user subscription mode, Batch VMs and other resources are created directly in your subscription when a pool is created. To create a Batch account in user subscription mode, you must also register your subscription with Azure Batch, and associate the account with an Azure Key Vault.
+
+### Azure App Service
+
+![Azure App Service decision flow](Images/select-azure-app-service.png)
+
+#### Things to consider when using Azure App Service
+
+- **Consider web apps.** Create web apps with App Service by using ASP.NET, ASP.NET Core, Java, Ruby, Node.js, PHP, or Python. You can choose either Windows or Linux as the host operating system.
+- **Consider API apps.** Build API apps similar to REST-based web APIs with your choice of language and framework. Azure App Service offers full Swagger support, and the ability to package and publish your API in Azure Marketplace. The apps can be consumed from any HTTP or HTTPS client.
+- **Consider WebJobs.** Use the App Service WebJobs feature to run a program or script. Program examples include Java, PHP, Python, or Node.js. Script examples include cmd, bat, PowerShell, or Bash. WebJobs can be scheduled or run by a trigger. WebJobs are often used to run background tasks as part of your application logic.
+- **Consider Mobile apps.** Exercise the Mobile Apps feature of Azure App Service to quickly build a backend for iOS and Android apps. On the mobile app side, App Service provides SDK support for native iOS and Android, Xamarin, and React native apps. With just a few steps in the Azure portal, you can:
+  - Store mobile app data in a cloud-based SQL database.
+  - Authenticate customers against common social providers, such as MSA, Google, Twitter, and Facebook.
+  - Send push notifications.
+  - Execute custom back-end logic in C# or Node.js.
+- **Consider continuous deployment.** Choose the Standard App Service Plan tier or better to enable continuous deployment of your code. Deploy your app to a staging slot and validate your app with test runs. When the app is ready for release, swap your staging and production slots. The swap operation warms up the necessary worker instances to match your production scale, which eliminates downtime.
+- **Consider authentication and authorization.** Take advantage of the built-in authentication capabilities in Azure App Service. You don't need any language, SDK, security expertise, or even any code to use the functionality in your web app or API. You can integrate with multiple sign-in providers, such as Azure Active Directory, Facebook, Google, and Twitter. Azure Functions offers the same built-in authentication features that are available in App Service.
+- **Consider multiple plans to reduce costs.** Configure different Azure App Service plans for different apps. Scale your plan up and down at any time. Start testing your web app in a Free App Service plan and pay nothing. When you want to add your custom DNS name to the web app, just scale your plan up to the Shared tier.
+
+### Azure Container Instances
+
+#### Compare Azure Container Instances to Azure Virtual Machines
+
+| **Compare**        | **Azure Container Instances**                                                                                                                                                                                            | **Azure Virtual Machines**                                                                                                                                                                                                                             |
+|--------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Isolation          | Container Instances typically provide lightweight isolation from the host and other containers, but doesn't provide as strong a security boundary as a virtual machine.                                                  | A virtual machine provides complete isolation from the host operating system and other virtual machines. Isolation is useful when a strong security boundary is critical, such as hosting apps from competing companies on the same server or cluster. |
+| Operating system   | Container Instances runs the user mode portion of an operating system and can be tailored to contain just the needed services for your application. This configuration results in fewer system resources being utilized. | Each virtual machine runs a complete operating system. Azure Virtual Machines typically requires more system resources than Container Instances, such as CPU, memory, and storage.                                                                     |
+| Deployment         | Container Instances deploy individual containers by using Docker via the command line. Multiple containers are deployed by using an orchestrator such as Azure Kubernetes Service.                                       | You can deploy individual virtual machines by using Windows Admin Center or Hyper-V Manager. Multiple virtual machines can be deployed by using PowerShell or System Center Virtual Machine Manager.                                                   |
+| Persistent storage | Container Instances use Azure Disks for local storage for a single node, or Azure Files (SMB shares) for storage shared by multiple nodes or servers.                                                                    | With Azure Virtual Machines, you can use a virtual hard disk (VHD) for local storage for a single virtual machine, or an SMB file share for storage shared by multiple servers.                                                                        |
+| Fault tolerance    | If a cluster node fails in Azure Container Instances, any containers running on it are rapidly recreated by the orchestrator on another cluster node.                                                                    | A virtual machine can fail over to another server in a cluster with the operating system of the virtual machine restarting on the new server.                                                                                                          |
+
+### Azure Logic Apps
+
+Azure Logic Apps is a cloud platform where you can create and run automated workflows with little to no code. By using the visual designer and selecting from prebuilt operations, you can quickly build a workflow that integrates and manages your apps, data, services, and systems.
+
+Azure Logic Apps simplifies the way that you connect legacy, modern, and cutting-edge systems across cloud, on premises, and hybrid environments and provides low-code-no-code tools for you to develop highly scalable integration solutions for your enterprise and business-to-business (B2B) scenarios.
+
+This list describes just a few example tasks, business processes, and workloads that you can automate using Azure Logic Apps:
+
+- Schedule and send email notifications using Office 365 when a specific event happens, for example, a new file is uploaded.
+- Route and process customer orders across on-premises systems and cloud services.
+- Move uploaded files from an SFTP or FTP server to Azure Storage.
+- Monitor tweets, analyze the sentiment, and create alerts or tasks for items that need review.
+
+#### Compare Azure Logic Apps and Azure Functions
+
+![Azure Logic Apps vs Azure Functions](Images/select-logic-apps.png)
+
+| **Compare**  | **Azure Functions**                                                          | **Azure Logic Apps**                                                                                       |
+|--------------|------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
+| Development  | Code-first                                                                   | Design-first                                                                                               |
+| Method       | Write code and use the durable functions extension                           | Create orchestrations with a GUI or by editing configuration files                                         |
+| Connectivity | - Large selection of built-in binding types - Write code for custom bindings | - Large collection of connectors - Enterprise Integration Pack for B2B scenarios - Build custom connectors |
+| Monitoring   | Azure Application Insights                                                   | Azure portal, Azure Monitor Logs (Log Analytics)                                                           |
+
+#### Single Tenant versus multi-tenant and ISE for Azure Logic Apps
+
+| **Resource type**                                                                                                                                                                                                                                                | **Benefits**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | **Resource sharing and usage**                                                                                                                                                                                                                                                                       | **Pricing and billing model**                                                                                                                                                                                          | **Limits management**                                                                                                                                                                                                                                                                                                                                                                                             |
+|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Logic App (Consumption)  Host environment: Multi-tenant Azure Logic Apps                                                                                                                                                                                         | - Easiest to get started  - Pay-for-what-you-use  - Fully managed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | A single logic app can have only one workflow.  Logic apps across Azure Active Directory tenants share the same processing (compute), storage, network, and so on.  For redundancy purposes, data is replicated in the paired region. For high availability, geo-redundant storage (GRS) is enabled. | Consumption (pay-per-execution)                                                                                                                                                                                        | Azure Logic Apps manages the default values for these limits, but you can change some of these values, if that option exists for a specific limit.                                                                                                                                                                                                                                                                |
+| Logic App (Consumption)  Host environment: Integration service environment (ISE)                                                                                                                                                                                 | - Enterprise scale for large workloads  - 20+ ISE-specific connectors that connect directly to virtual networks  - Predictable pricing with included usage and customer-controlled scaling                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | A single logic app can have only one workflow.  Logic apps in the same environment share the same processing (compute), storage, network, and so on.  Data stays in the same region where you deploy the ISE.                                                                                        | ISE (fixed)                                                                                                                                                                                                            | Azure Logic Apps manages the default values for these limits, but you can change some of these values, if that option exists for a specific limit.                                                                                                                                                                                                                                                                |
+| Logic App (Standard)  Host environment: Single-tenant Azure Logic Apps  Note: If your scenario requires containers, create single-tenant based logic apps using Azure Arc enabled Logic Apps. For more information, review What is Azure Arc enabled Logic Apps? | - Run using the single-tenant Azure Logic Apps runtime. Deployment slots are currently not supported.  - More built-in connectors for higher throughput and lower costs at scale  - More control and fine-tuning capability around runtime and performance settings  - Integrated support for virtual networks and private endpoints.  - Create your own built-in connectors.                                                                                                                                                                                                                                                                                                                                                                             | A single logic app can have multiple stateful and stateless workflows.  Workflows in a single logic app and tenant share the same processing (compute), storage, network, and so on.  Data stays in the same region where you deploy your logic apps.                                                | Standard, based on a hosting plan with a selected pricing tier.  If you run stateful workflows, which use external storage, the Azure Logic Apps runtime makes storage transactions that follow Azure Storage pricing. | You can change the default values for many limits, based on your scenario's needs.  Important: Some limits have hard upper maximums. In Visual Studio Code, the changes you make to the default limit values in your logic app project configuration files won't appear in the designer experience. For more information, see Edit app and environment settings for logic apps in single-tenant Azure Logic Apps. |
+| Logic App (Standard)  Host environment: App Service Environment v3 (ASEv3) - Windows plans only                                                                                                                                                                  | Same capabilities as single-tenant plus the following benefits:  - Fully isolate your logic apps.  - Create and run more logic apps than in single-tenant Azure Logic Apps.  - Pay only for the ASE App Service plan, no matter the number of logic apps that you create and run.  - Can enable autoscaling or manually scale with more virtual machine instances or a different App Service plan.  - Inherit the network setup from the selected ASEv3. For example, when deployed to an internal ASE, workflows can access the resources in a virtual network associated with the ASE and have internal access points.  Note: If accessed from outside an internal ASE, run histories for workflows in that ASE can't access action inputs and outputs. | A single logic app can have multiple stateful and stateless workflows.  Workflows in a single logic app and tenant share the same processing (compute), storage, network, and so on.  Data stays in the same region where you deploy your logic apps.                                                | App Service plan                                                                                                                                                                                                       | You can change the default values for many limits, based on your scenario's needs.  Important: Some limits have hard upper maximums. In Visual Studio Code, the changes you make to the default limit values in your logic app project configuration files won't appear in the designer experience. For more information, see Edit app and environment settings for logic apps in single-tenant Azure Logic Apps. |
+
+## Design an application architecture
+
+### Message and Event scenarios
+
+#### Difference between messages and events
+
+- **Message**
+  - Messages contain raw data that's produced by one component and consumed by another component.
+  - A message contains the data itself, not just a reference to that data.
+- **Events**
+- Events are lighter weight than messages and are most often used for broadcast communications.
+- An event has two components, a publisher and subscribers. The event publisher sends the event. The event subscribers receive events.
+
+#### Azure Queue storage
+
+[Azure Queue Storage](https://learn.microsoft.com/en-us/azure/storage/queues/storage-queues-introduction) is a service that uses Azure Storage to store large numbers of messages. Examine the following characteristics of the service.
+
+- Queues in Azure Queue Storage can contain millions of messages.
+- The number and size of queues is limited only by the capacity of the Azure storage account that owns the Queue Storage.
+- Messages in Queue Storage can be securely accessed from anywhere in the world by using a simple REST-based interface.
+- Queues generally provide increased reliability, guaranteed message delivery, and transactional support.
+
+#### Azure Service Bus
+
+[Azure Service Bus](https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview) is a fully managed enterprise message broker. Service Bus is used to decouple applications and services from each other. Review the following benefits characteristics of the service.
+
+- Azure Service Bus supports message queues and publish-subscribe topics.
+- Azure Service Bus lets you load-balance work across competing workers.
+- You can use Service Bus to safely route and transfer data and control across service and application boundaries.
+- Service Bus helps you coordinate transactional work that requires a high degree of reliability.
+
+#### Compare Azure Service Bus with Azure Queue storage
+
+| **Messaging solution**                     | **Example scenarios**                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+|--------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Azure Queue Storage                        | You want a simple queue to organize messages.  You need an audit trail of all messages that pass through the queue.  You expect the queue storage to exceed 80 GB.  You'd like to track progress for processing a message inside of the queue.                                                                                                                                                                                                                                              |
+| Azure Service Bus message queues           | You require an at-most-once delivery guarantee.  You require at-least-once message processing (PeekLock receive mode).  You require at-most-once message processing (ReceiveAndDelete receive mode).  You want to group messages into transactions.  You want to receive messages without polling the queue.  You need to handle messages larger than 64 KB but less than 256 KB.  You expect the queue storage won't exceed 80 GB.  You'd like to publish and consume batches of messages. |
+| Azure Service Bus publish-subscribe topics | You need multiple receivers to handle each message.  You expect multiple destinations for a single message but need queue-like behavior.                                                                                                                                                                                                                                                                                                                                                    |
+
+### Event Hubs
+
+[Azure Event Hubs](https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-about) is a fully managed, big data streaming platform and event ingestion service. Let's review the characteristics of the service:
+
+- Azure Event Hubs supports real time data ingestion and microservices batching on the same stream.
+- You can send and receive events in many different languages. Messages can also be received from Azure Event Hubs by using Apache Storm.
+- Events received by Azure Event Hubs are added to the end of its data stream.
+  - The data stream orders events according to the time they event is received.
+  - Consumers can seek along the data stream by using time offsets.
+- Event Hubs implements a pull model that differentiates it from other messaging services like Azure Service Bus queues.
+  - Event Hubs holds each message in its cache and allows it to be read.
+  - When a message is read from Event Hubs, it's not deleted. The message remains for other consumers.
+- Event Hubs doesn't have a built-in mechanism to handle messages that aren't processed as expected.
+- Azure Event Hubs scales according to the number of purchased throughput (processing) units. Performance features vary for each pricing tier, such as Basic, Standard, or Premium.
+
+### Event Grid
+
+[Azure Event Grid](https://learn.microsoft.com/en-us/azure/event-grid/overview) is a fully managed event routing service that runs on Azure Service Fabric. Event Grid exists to make it easier to build event-based and serverless applications on Azure. Examine the following characteristics of the service.
+
+- Azure Event Grid aggregates all your events and provides routing from any source to any destination.
+- Event Grid distributes events from sources like Azure Blob Storage accounts and Azure Media Services.
+- Events are distributed to handlers like Azure Functions and Azure DevOps Webhooks.
+- The service manages the routing and delivery of events from many sources and subscribers eliminates, which helps to minimize cost and latency by eliminating the need for polling.
+
+![Azure Event Grid](Images/event-grid.png)
+
+#### Compare Event Grid with Event Hubs and Service Bus
+
+| **Azure service** | **Purpose**                     | **Message or Event**          | **Usage scenario**                                  |
+|-------------------|---------------------------------|-------------------------------|-----------------------------------------------------|
+| Azure Event Grid  | Reactive programming            | Event distribution (discrete) | React to status changes                             |
+| Azure Event Hubs  | Big data pipeline               | Event streaming (series)      | Conduct telemetry and distributed data streaming    |
+| Azure Service Bus | High-value enterprise messaging | Message                       | Fulfill order processing and financial transactions |
+
+### Azure API Management
+
+[Azure API Management](https://learn.microsoft.com/en-us/azure/api-management/api-management-key-concepts) is a cloud service platform that lets you publish, secure, maintain, and analyze all your APIs. The following diagram shows how Azure API Management serves as a front door for an organization's APIs, and routes to the server where the APIs are deployed.
+
+### Azure App Configuration
+
+[Azure App Configuration](https://learn.microsoft.com/en-us/azure/azure-app-configuration/overview) provides a service to centrally manage application settings and feature flags. You can use App Configuration to store all the settings for your application and secure their accesses in one place.
+
+App Configuration offers many benefits for an application architecture. As you review the features, consider how Azure App Configuration can support deployment for the Tailwind Traders applications.
+
+- Azure App Configuration is a fully managed service that can be set up in minutes, and supports native integration with popular frameworks.
+- App Configuration offers flexible key representations and mappings, and point-in-time replay of settings.
+- App Configuration has a dedicated UI for feature flag management, and supports resource tagging with labels.
+- You can compare two sets of configurations on custom-defined dimensions.
+- App Configuration provides enhanced security through Azure Active Directory-managed identities for Azure resources.
+- Sensitive information can be encrypted at rest and in transit.
+- Azure App Configuration works in both development and production environments.
 
 ## To try after the exam
 
